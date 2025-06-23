@@ -1,0 +1,51 @@
+name: Deploy Apache Web Server
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  APACHE_DIR: /var/www/html
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2.5.0
+
+      - name: Cache apt packages
+        uses: actions/cache@v3
+        with:
+          path: /var/cache/apt
+          key: ${{ runner.os }}-apt-cache
+          restore-keys: |
+            ${{ runner.os }}-apt-cache
+
+      - name: Set up Apache
+        run: |
+          sudo apt update
+          sudo apt install -y apache2
+
+      - name: Deploy files
+        run: |
+          sudo mkdir -p $APACHE_DIR_new
+          sudo cp -r * $APACHE_DIR_new/
+          sudo mv $APACHE_DIR $APACHE_DIR_backup
+          sudo mv $APACHE_DIR_new $APACHE_DIR
+          sudo rm -rf $APACHE_DIR_backup
+
+      - name: Restart Apache service
+        run: |
+          sudo systemctl restart apache2
+
+      - name: Verify Apache is running
+        run: |
+          set -e
+          curl -I http://localhost | grep "200 OK"
+
+      - name: Notify deployment success
+        run: |
+          echo "Apache web server deployed successfully!"
+          echo "Visit http://your-server-ip to see your site."
